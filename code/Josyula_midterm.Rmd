@@ -1,0 +1,393 @@
+---
+title: "Midterm Exam"
+author: "Ananth Josyula"
+institute: "Vanderbilt University"
+date: "Due Date: 2022/10/16 @ 11:59PM CST"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+## Getting Set Up
+
+Download the zipped `midterm` folder from Github and save to your class folder for DS1000. Unzip it, retaining the folder structure. Within you should fine a `code` folder and a `data` folder. The `data` folder should contain the two datasets we will be using in the midterm: `sc_debt.Rds` and `game_summary.Rds`. Within the `code` folder is this very file: `DS1000_midterm_exam.Rmd`. 
+
+Rename this file to `[LAST NAME]_midterm.Rmd` and do all your work in this file.
+
+All of the following questions should be answered with `set.seed(123)`. To start, require `tidyverse` and load the `sc_debt.Rds` data to `debt`.
+```{r}
+# INSERT CODE HERE
+require(tidyverse)
+debt <- readRDS("../data/sc_debt.rds")
+```
+
+**NB**: you will be penalized 1 point for each poorly labeled figure. You will be penalized 5 points if the submission is not a PDF of the knitted output. The total points available are 50.
+
+## Question 0: Independent Work Statement
+Please sign your name in the space provided by typing out your full name in place of the underline:
+
+"I, Ananth Josyula, am aware of the serious nature of plagiarism and affirm that I did not collaborate with other students while completing this midterm."
+
+
+## Question 1 [5 points]
+Describe the following three variables: `grad_debt_mdn`, `costt4_a`, and `region`. What `class` are they? Do they contain any missing data? How should you visualize each of them for univariate description? Plot your choices with clear labels.
+```{r}
+# INSERT CODE HERE
+debt_raw <- debt %>%
+  select(grad_debt_mdn, costt4_a, region, research_u, md_earn_wne_p6) %>% filter(!is.na(grad_debt_mdn)) %>% filter(!is.na(costt4_a)) %>% filter(!is.na(region))
+
+debt_raw %>%
+  ggplot(aes(x=grad_debt_mdn)) + geom_density() + 
+  labs(title = 'Number of Schools vs Median Graduation Debt',
+       subtitle = 'Data from sc_debt.rds',
+       x = 'Median Graduation Debt',
+       y = 'Number of Schools')
+
+debt_raw %>%
+  ggplot(aes(x=costt4_a)) + geom_density() + 
+  labs(title = 'Number of Schools vs Average Cost of Attendance',
+       subtitle = 'Data from sc_debt.rds',
+       x = 'Cost of Attendance',
+       y = 'Number of Schools')
+
+debt_raw %>%
+  ggplot(aes(x=region)) + geom_bar() + 
+  labs(title = 'Number of Schools vs Region',
+       subtitle = 'Data from sc_debt.rds',
+       x = 'Region',
+       y = 'Number of Schools')
+
+```
+
+
+> - grad_debt_mdn is an integer class and represents the median debt of graduates for a given university. costt4_a is an integer class and represents the average cost of attendance for a given university. region is a character class and represents the geographical location for a given university. Both grad_debt_mdn and costt4_a have missing data. Since grad_debt_mdn and costt4_a contain integer continuous values after removing the missing data, a distribution curve is used to visualize them for univariate description. Meanwhile, region contains categorical data indicating that a bar graph is best suited to visualize for univariate description.
+
+## Question 2 [5 points]
+In which region are the most research universities located? Which region has the fewest? Plot your answer.
+```{r}
+# INSERT CODE HERE
+debt_raw %>% 
+  select(region, research_u) %>% 
+  filter(research_u == 1) %>%
+  ggplot(aes(x=region)) + geom_bar() + 
+  labs(title = 'Number of Schools vs Region',
+       subtitle = 'Data from sc_debt.rds',
+       x = 'Region',
+       y = 'Number of Schools')
+
+```
+
+> - The Southeast region has the most research universities. Meanwhile, the Far West region has the fewest research universities.
+
+## Question 3 [5 points]
+What is the conditional relationship between region and average cost of attendance? Plot this relationship using the appropriate `geom_` function and justify your choice.
+
+```{r}
+# INSERT CODE HERE
+debt_raw %>%
+  group_by(region) %>%
+  summarise(meanC4A = mean(costt4_a, na.rm=T))
+
+debt_raw %>%
+  ggplot(aes(x=region, y=costt4_a))+
+  geom_boxplot(fill = 'white') +
+  labs(title = 'Cost of Attendance vs Region',
+       subtitle = 'Data from sc_debt.rds',
+       x='Region',
+       y='Cost of Attendance')
+```
+> - The graph shows a conditional relationship between region and average cost of A box plot is used here because the region is categorical and the cost is continuous. This graph shows that the cost of attendance does vary based on the region. For example, schools in New England are typically more expensive than school sin the great plains. This may be due to factors relating to state wealth, levels of education, and number of elite institutions.
+
+## Question 4 [5 points]
+What is the conditional relationship between the cost of attendance and future earnings of graduates? As above, plot this using the best `geom_` and justify your choice. Highlight the relationship with `geom_smooth()`, and discuss what it means. Why might this correlation be spurious?
+
+```{r}
+# INSERT CODE HERE
+debt_raw %>%
+  group_by(costt4_a) %>%
+  summarise(meanFE = mean(md_earn_wne_p6, na.rm=T))
+
+debt_raw %>%
+  ggplot(aes(x=costt4_a, y=md_earn_wne_p6))+
+  geom_point()+
+  geom_smooth(method ='lm', se = F)+
+  labs(title = 'Future Earning of Graduates vs Cost of Attendance',
+       subtitle = 'Data from sc_debt.rds',
+       x='Cost of Attendance',
+       y='Future Earnings of Graduates ')
+```
+
+> - Based on the line of best fit, as the cost of attendance increases, the future earning of graduates increases. However, this correlation might be spurious since there are so many more colleges costing less than 20,000 than colleges costing greater than 60,000.
+
+## Question 5 [5 points]
+What is the conditional relationship between the median debt of graduates and their future earnings? Identify those schools for whom the debt is larger than their earnings. Plot the conditional relationship using the appropriate `geom_`, coloring schools by whether the debt is greater than the earnings. To answer, you only need to generate the plot.
+
+```{r}
+# INSERT CODE HERE
+debt_raw %>%
+  group_by(grad_debt_mdn)%>%
+  summarise(meanFE = mean(md_earn_wne_p6, na.rm=T))
+
+debt_raw %>%
+  mutate(debtLarger = ifelse(grad_debt_mdn > md_earn_wne_p6, md_earn_wne_p6, NA)) %>%
+  mutate(debtSmaller = ifelse(grad_debt_mdn <= md_earn_wne_p6, md_earn_wne_p6, NA)) %>%
+  ggplot() +
+  geom_point(aes(x=grad_debt_mdn, y=debtLarger, color="red")) +
+  geom_point(aes(x=grad_debt_mdn, y=debtSmaller, color = "blue")) +
+  scale_color_manual(values = c('blue','red'), labels = c('Graduate Debt is Lower','Graduate Debt is Higher')) +
+  labs(title = 'Future Earnings of Graduates vs Median Debt of Graduates',
+       subtitle = 'Data from sc_debt.rds',
+       x='Median Debt of Graduates ',
+       y='Future Earnings of Graduates ')
+```
+
+## Question 6 [5 points]
+Now load the `game_summary.Rds` data to `gms`. Identify the team with the fewest points over all three seasons. Who is it and how many points did they score? Were they also the team with the lowest win percentage over all three seasons? If not, how far were they from the bottom of the pack? Now plot their points per game by season, using the best `geom_`. **NOTE:** You should convert `yearSeason` to a categorical variable with the `factor()` command.
+
+```{r}
+# INSERT CODE HERE
+gms <- readRDS(file="../data/game_summary.rds")
+
+gms_raw <- gms 
+
+gms_raw %>%
+group_by(nameTeam) %>%
+  summarise(totalPoints = sum(pts, na.rm=T)) %>%
+  arrange(totalPoints)
+
+gms_raw %>%
+group_by(nameTeam) %>%
+  summarise(winPercentage = mean(isWin, na.rm=T)) %>%
+  arrange(winPercentage)
+
+gms_raw %>%
+filter(nameTeam == 'Memphis Grizzlies') %>%
+ggplot(aes(x=factor(yearSeason), y=pts)) +
+  geom_boxplot() +
+  labs(title = 'Memphis Grizzlies Points per Game in 2017 2018 and 2019',
+       subtitle = 'Data from game_summary.rds',
+       x='Season Year',
+       y='Points per Game')
+```
+
+> - The Memphis Grizzlies had the fewest points over all three seasons with 24874 points. The Phoenix Suns had the lowest win percentage of 0.2601626. Meanwhile, the Grizzlies are tied for the eighth lowest win percentage of 0.3983740 with the Los Angeles Lakers.
+
+## Question 7 [5 Points]
+Investigate the following theory: "Good teams rebound more and turn over the ball less. Therefore, turnovers and rebounds should be negatively correlated." Plot the conditional relationship and either refute or support the theory. EXTRA CREDIT: provide a theorized explanation for the relationship you observe in the data.
+
+```{r}
+# INSERT CODE HERE
+gms_raw %>%
+  group_by(tov)%>%
+  summarise(rebounds = mean(treb, na.rm=T))
+
+gms_raw %>%
+ggplot(aes(x = tov, y = treb)) +
+  geom_point() +
+  geom_smooth(method = 'lm', se = F) +
+  labs(title = 'Rebounds per Game vs Turnovers per Game',
+       subtitle = 'Data from game_summary.rds',
+       x='Turnovers per Game',
+       y='Rebounds per Game')
+```
+
+> - Based on the line of best fit of the graph, there is a slight positive correlation between turnovers per game and rebounds per game. This positive correlation is indicated by the slightly positive slope of the line of best fit. However as the question states, since we use treb and not oreb, one would expect good teams to cause more turnovers from rebounds (treb) and turnover the ball themselves less. Possibly, causing more turnovers from rebounds (treb) leads to more game time spent with the ball, therefore leaving more time to turnover the ball in transitional play (this is not tracked by treb).
+
+## Question 8 [5 points]
+Investigate the following theory: "Offensive rebounds give the team extra chances to score, more free throw opportunities, and tires out the defense. As such, offensive rebounds should be positively correlated with wins." Plot the conditional relationship, and then use **bootstrapping** to state your confidence in your conclusion.  NB: `set.seed(123)` for replicability, and calculate 100 bootstrapped simulations.
+
+```{r}
+# INSERT CODE HERE
+gms_raw %>%
+  group_by(oreb) %>%
+  summarise(avgWins = mean(isWin, na.rm=T)) %>%
+  ggplot(aes(x=oreb, y=avgWins)) +
+  geom_point() +
+  geom_smooth(method ='lm', se = F) +
+  labs(title = 'Win Percentage vs Offensive Rebounds',
+       subtitle = 'Data from game_summary.rds',
+       x='Offensive Rebounds',
+       y='Win Percentage')
+
+gms_raw %>%
+  ggplot(aes(x=oreb, fill=isWin)) +
+  geom_density()+
+  scale_fill_manual(name = 'Winner',values = c('red','blue'),labels = c('Loser','Winner'))+
+  labs(title = 'Whether a Game is Won or Lost vs Offensive Rebounds',
+       subtitle = 'Data from game_summary.rds',
+       x='Offensive Rebounds',
+       y='Density')
+
+set.seed(123)
+
+bs_reb <- NULL
+
+for(i in 1:100) {
+  bs_reb <- gms %>%
+    filter(!is.na(oreb)) %>%
+    filter(!is.na(isWin)) %>%
+    sample_n(size = 100,replace = T) %>%
+    group_by(isWin) %>%
+    summarise(avgOreb = mean(oreb, na.rm=T)) %>%
+    spread(isWin, avgOreb) %>%
+    bind_rows(bs_reb)
+}
+
+bs_reb %>%
+  mutate(difference = ifelse(`TRUE` > `FALSE`,1,0)) %>%
+  summarise(mean(difference))
+```
+> - Based on the line of best fit of the scatter plot there appears to be a negative correlation between win percentage and offensive rebounds, but there a few points skewing the data. Based on the density graph both wins and losses are normally distrbuted and overlap almost entirely. This indicates that there is no real correlation between win percentage and offensive rebounds. This is supported by the boostrapped sample which yields a confidence of 46%, that teams won 46% of games in which they had more offensive rebounds than their opponent, meaning that there is clearly no significance in their correlation.
+
+## Question 9 [5 points]
+Test the following hypothesis: "Teams with at least 1 day rest between games are more likely to win their next game than those with no rest." You will need to create a new variable that is a dummy with the value of 1 if `teamrest` is greater than 0, and zero otherwise. Use bootstrapping to express your **confidence** about your conclusion. Plot the difference in win probabilities across 100 bootstrapped simulations. NB: `set.seed(123)` for replicability.
+
+```{r}
+# INSERT CODE HERE
+set.seed(123)
+
+restWin <- NULL
+
+for(i in 1:100){
+  restWin <- gms %>%
+    filter(!is.na(teamrest)) %>%
+    filter(!is.na(isWin)) %>%
+    sample_n(size=1000, replace = T) %>%
+    mutate(yesrest = ifelse(teamrest>=1,1,0)) %>%
+    group_by(yesrest) %>%
+    summarise(avgWins = mean(isWin, na.rm=T)) %>%
+    spread(yesrest, avgWins)%>%
+    bind_rows(restWin)
+}
+
+restWin %>%
+  mutate(difference= ifelse(`1`>`0`,1,0)) %>%
+  summarise(mean(difference))
+
+restWin %>%
+    mutate(difference=`1`-`0`) %>%
+  ggplot() +
+  geom_density(aes(x=difference)) +
+  geom_vline(xintercept = 0, linetype = 'dashed', color='red') +
+  labs(title = 'Do Teams with at Least One Day of Rest Win More than Those Without?',
+       subtitle = 'Data from game_summary.rds',
+       x='Difference in Win Probabilities',
+       y='Density')
+```
+
+> - Based on the distribution curve, when teams have at least one day of rest their win probability is most of the time positive. The vertical red dashed line indicates that rest has no correlation on a team winning more or less. Since the curve is skewed to the left and has the majority of its values to the right of 0, teams with at least one day of rest win more games than they lose. Based on the bootstrapped results, we are 97% confident in our conclusion.
+
+## Question 10 [5 points]
+Run the same analysis for points (`pts`). How certain are you that teams with 1+ days of rest score more points than those without?
+
+```{r}
+# INSERT CODE HERE
+set.seed(123)
+
+restPts <- NULL
+
+for(i in 1:100){
+  restPts <- gms %>%
+    filter(!is.na(teamrest)) %>%
+    filter(!is.na(pts)) %>%
+    sample_n(size=1000, replace = T) %>%
+    mutate(yesrest = ifelse(teamrest>=1,1,0)) %>%
+    group_by(yesrest) %>%
+    summarise(avgPts = mean(pts, na.rm=T)) %>%
+    spread(yesrest, avgPts) %>%
+    bind_rows(restPts)
+}
+
+restPts %>%
+  mutate(difference= ifelse(`1`>`0`,1,0)) %>%
+  summarise(mean(difference))
+ 
+restPts %>%
+    mutate(difference=`1`-`0`) %>%
+  ggplot() +
+  geom_density(aes(x=difference)) +
+  geom_vline(xintercept = 0, linetype = 'dashed', color='red') +
+  labs(title = 'Do Teams with at Least One Day of Rest Score More that Those Without?',
+       subtitle = 'Data from game_summary.rds',
+       x='Point Difference',
+       y='Density')
+```
+
+> - Based on the distribution curve, when teams have at least one day of rest their point difference is most of the time positive. The vertical red dashed line indicates that rest has no correlation on a team scoring more or less points. Since the curve is skewed to the left and has the majority of its values to the right of 0, teams with at least one day of rest score more points. Based on the bootstrapped results, we are 96% confident in our conclusion.
+
+## Question 11 [10 Extra Credit Points]
+EXTRA CREDIT: Is the point difference closer when both teams are equally well-rested? To answer this question, you will need to calculate the rest difference between the two teams per `idGame`, as well as their point difference. Plot the distribution of point margins for less rested and more rested teams separately, then calculate the difference between less and more rested teams and plot this. Express your conclusion in terms of certainty using 500 bootstrapped simulations. 
+
+**Hint:** select just the game ID, the home/away status, and either the rest or the points. Then use `spread(locationGame,teamrest)` or `spread(locationGame,pts)` to get two columns of rest and points for the home and away teams. Calculate the rest and points difference consistently (i.e., always H-A or A-H), select just the idGame and difference measure, and then combine to create a new dataset via `left_join`. Armed with these data, conduct a bootstrapped test of the conditional relationship between rest differences and point differences.
+
+```{r}
+# INSERT CODE HERE
+set.seed(123)
+
+restLoc <- NULL
+ptsLoc <- NULL
+
+restLoc <- gms %>%
+  select(locationGame, teamrest,idGame) %>%
+  filter(!is.na(locationGame)) %>%
+  filter(!is.na(teamrest)) %>%
+  filter(!is.na(idGame)) %>%
+  spread(locationGame, teamrest)%>%
+  bind_rows(restLoc)
+
+ptsLoc <- gms %>%
+  select(locationGame, pts,idGame) %>%
+  filter(!is.na(locationGame)) %>%
+  filter(!is.na(pts)) %>%
+  filter(!is.na(idGame)) %>%
+  spread(locationGame, pts)%>%
+  bind_rows(ptsLoc)
+
+restDiff <- restLoc %>%
+  mutate(rDiff= `H`-`A`, H=NULL, A=NULL)
+
+ptsDiff <- ptsLoc %>%
+  mutate(pDiff= `H` - `A`, H=NULL, A=NULL)
+
+rstPts <-left_join(restDiff, ptsDiff, by="idGame")
+
+
+set.seed(123)
+
+restPnt <- NULL
+
+for(i in 1:500){
+  restPnt <- rstPts %>%
+  sample_n(size=1000, replace = T) %>%
+  mutate(yesrest = ifelse(rDiff>0,1,0)) %>%
+    group_by(yesrest) %>%
+    summarise(ptsmean = mean(pDiff, na.rm=T)) %>%
+    spread(yesrest, ptsmean)%>%
+    bind_rows(restWin)
+  
+restPnt %>%
+  mutate(difference= ifelse(`1`>`0`,1,0)) %>%
+  summarise(mean(difference))
+ 
+restPnt %>%
+  mutate(difference=`1`-`0`) %>%
+  ggplot() +
+  geom_density(aes(x=difference)) +
+  labs(title = 'Is the point difference closer when both teams are equally well-rested?',
+       subtitle = 'Data from game_summary.rds',
+       x='Point Difference',
+       y='Density')
+}
+```
+
+> - I was only able to partially complete the Extra Credit so I included what I did.
+
+## Optional Extra Credit [5 Extra Credit Points]
+
+Please complete this **anonymous** course evaluation. This does not influence Professor Bisbee's career or position in the university and will only be used to improve the course. You can find the anonymous survey [here](https://nyu.qualtrics.com/jfe/form/SV_daPytGPjypTqJgy). Upon completing the survey, you will be given a completion code, which you should paste back at the end of your midterm below. 
+
+**NOTE**: There is only one completion code to ensure that all responses are anonymized and can't be linked back to the midterm exams. To prevent students from sharing the code with their friends to get the 5 extra credit points without completing the survey, these 5 points are only provided if the number of midterms with the completion code *exactly equals the number of survey responses*. In other words, if there are 150 exams with the completion code, but only 50 completed surveys, **all students will forfeit their extra credit points**. The purpose of this strict rule is to disincentivize the sharing of this code either by those who would fill out the survey and then share the code, or by those who would ask to be given the code without filling out the survey. 
+
+
+> - D@taSc!enceForEveryone
+
